@@ -1,0 +1,28 @@
+{
+  "name": "wholesome-discord-manager",
+  "version": "1.0.0",
+  "description": "",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Gavin Mogan <npm@gavinmogan.com> (https://www.gavinmogan.com/)",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.13.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.53.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.29.0",
+    "eslint-plugin-n": "^16.3.0",
+    "eslint-plugin-promise": "^6.1.1",
+    "typescript": "^5.2.2"
+  }
+}
