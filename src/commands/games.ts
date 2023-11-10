@@ -1,120 +1,182 @@
 import {
   CommandInteraction,
   SlashCommandBuilder,
-  ButtonBuilder,
-  ButtonStyle,
   ActionRowBuilder,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
-
-  Routes,
-  REST,
-  RESTGetAPIUserResult,
-  RESTGetAPIGuildMemberResult,
   GuildMemberRoleManager,
-  ComponentType
+  ComponentType,
+  Collection,
+  Role,
+  Client,
+  StringSelectMenuInteraction,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  ButtonBuilder,
+  ButtonStyle
 } from 'discord.js';
 
+class Category {
+  name: string = ""
+
+  constructor(data = {name: ""}) {
+    this.name = data.name;
+  }
+
+  get id() {
+    return this.name.toLowerCase();
+  }
+}
+
 export const data = new SlashCommandBuilder()
-  .setName('games')
-  .setDescription('Pick which games you are interested in playing with others');
+  .setName('roles')
+  .setDescription('Manage which roles you want')
+  // .addSubcommand(subcommand => subcommand.setName('list')
+  //   .setDescription('List which categories are available'))
+  // .addSubcommand(subcommand => subcommand.setName('manage')
+  //   .setDescription('List which categories are available')
+  //   .addUserOption(option => option.setName('category')
+  //   .setDescription('Which category')))
 
-export async function execute(interaction: CommandInteraction, rest: REST) {
-  if (!interaction.guildId) {
-    throw new Error('no guild id')
-  }
+async function getRoles(interaction: CommandInteraction): Promise<{
+  rolesByCategory: Collection<string, Role[]>,
+  allCategories: Array<Category>,
+}> {
+  const rolesByCategory = new Collection<string, Role[]>();
+  const allCategories = new Array<Category>();
 
-  const myRoles = interaction.member?.roles instanceof GuildMemberRoleManager ?
-    interaction.member?.roles.cache.map(role => role.id) : interaction.member?.roles;
+  const sortedRoles = await interaction.guild?.roles.fetch()
+  .then(roles => roles.values())
+  .then(roles => Array.from(roles).sort((role1, role2) => {
+    return role2.position-role1.position;
+  })) || [];
 
-  const allRoles = (await interaction.guild?.roles.fetch())?.filter(role => {
-    if (role.tags?.botId) {
-      return false; // is a special bot one
-      console.log('role.mention', role.name, role.mentionable);
+  let currentCategory: Category | undefined = undefined;
+  for (const role of sortedRoles) {
+    if (role.name.startsWith('{')) {
+      try {
+        currentCategory = new Category(JSON.parse(role.name));
+        rolesByCategory.set(currentCategory.id, []);
+        allCategories.push(currentCategory);
+        continue;
+      } catch (err) {
+        console.error("unable to parse role/category", err);
+        continue;
+      }
     }
-    if (!role.mentionable) {
-      return false; // isn't mentionable
+    if (!currentCategory) {
+      continue;
     }
-    return true;
-  });
-
-  if (!allRoles?.size) {
-    throw new Error('no roles defined for guild')
+    rolesByCategory.ensure(currentCategory.id, () => new Array<Role>()).push(role);
   }
 
-  // FIXME - eww, make this some sort of database.
-  const botMe = await rest.get(Routes.user('@me')) as RESTGetAPIUserResult;
-  const guildMe = await rest.get(Routes.guildMember(interaction.guildId, botMe.id)) as RESTGetAPIGuildMemberResult;
+  return { rolesByCategory, allCategories };
+}
 
-  const possibleRoles = guildMe.roles.map(role => allRoles.get(role)).filter(Boolean);
-  if (!possibleRoles) {
-    throw new Error('Im not in any roles');
-  }
-
-  const buttons = Array<ButtonBuilder>();
+function buildReply(category: Category, allRoles: Array<Role>, myRoles: Set<string>) {
   const options = Array<StringSelectMenuOptionBuilder>();
 
-  for (const role of possibleRoles.filter(Boolean)) {
+  for (const role of allRoles) {
     if (!role) { continue; }
-    buttons.push(
-      new ButtonBuilder()
-        .setCustomId(`role_${role.id}`)
-        .setLabel(role.name?.split('|')?.shift() || 'Role')
-        .setStyle(myRoles?.includes(role.id) ? ButtonStyle.Danger : ButtonStyle.Primary)
-    );
     options.push(new StringSelectMenuOptionBuilder()
-      .setLabel(`${role.name?.split('|')?.shift() || 'Role'}`)
-      .setValue(`${role.id}`)
-      .setDefault(myRoles?.includes(role?.id))
+      .setLabel(role.name)
+      .setValue(role.id)
+      .setDefault(myRoles.has(role.id))
     )
   }
-
-  const options2 = Array<StringSelectMenuOptionBuilder>();
-  Array(25).fill(0).forEach((_, idx) => {
-    options2.push(new StringSelectMenuOptionBuilder()
-      .setLabel(`Role ${idx}}`)
-      .setValue(`${idx}`)
-    )
-  })
-
-  const options3 = Array<StringSelectMenuOptionBuilder>();
-  Array(25).fill(0).forEach((_, idx) => {
-    options3.push(new StringSelectMenuOptionBuilder()
-      .setLabel(`3-Role ${idx}}`)
-      .setValue(`3-${idx}`)
-    )
-  })
 
   // interaction.user is the object representing the User who ran the command
   // interaction.member is the GuildMember object, which represents the user in the specific guild
 
-  const response = await interaction.reply({
+  return {
     content: `What games are you interested in being pinged about?`,
     ephemeral: true,
     components: [
-      new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons),
       new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(new StringSelectMenuBuilder()
         .setCustomId('starter')
         .setPlaceholder('Make a selection!')
+        .setMaxValues(options.length)
         .addOptions(...options)),
-      new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(new StringSelectMenuBuilder()
-        .setCustomId('options2')
-        .setPlaceholder('Make a selection!')
-        .addOptions(...options2)),
-        new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(new StringSelectMenuBuilder()
-        .setCustomId('options3')
-        .setPlaceholder('Make a selection!')
-        .addOptions(...options3)),
     ],
-  })
+  }
+}
 
-  const collector = response.createMessageComponentCollector({ componentType: ComponentType.StringSelect, time: 3_600_000 });
+export async function execute(interaction: CommandInteraction, client: Client) {
+  if (!interaction.guildId) {
+    throw new Error('no guild id')
+  }
 
-  collector.on('collect', async i => {
-    console.log(i);
-    await i.reply(`${i.user} has selected ${i.values}!`);
+  const { rolesByCategory, allCategories } = await getRoles(interaction);
+
+  if (!allCategories.length) {
+    return await interaction.reply({
+      content: `No categories`,
+      ephemeral: true,
+    });
+  }
+
+  // Add inputs to the modal
+  let response = await interaction.reply({
+    content: "Select category of roles you are interested in.",
+    ephemeral: true,
+    components: [
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        ...allCategories.map(category => new ButtonBuilder()
+          .setCustomId(`role_${category.id}`)
+          .setLabel(category.name)
+          .setStyle(ButtonStyle.Primary)
+        )
+      )
+    ]
   });
 
-  // interaction.editReply({
-  //   components
+  try {
+    const confirmation = await response.awaitMessageComponent({ filter: i => i.user.id === interaction.user.id, time: 86400 });
+  } catch (e) {
+    await interaction.editReply({ content: 'Confirmation not received within 1 day, cancelling', components: [] });
+  }
+
+  return;
+
+  // const category = new Category({ name: "games" });
+
+  // const allRoles = await getRoles(interaction, interaction.guildId, category.id);
+
+  // if (!allRoles.length) {
+  //   return await interaction.reply({
+  //     content: `No roles for category ${category.name}`,
+  //     ephemeral: true,
+  //   });
+  // }
+
+  // let myRoles = new Set((interaction.member?.roles instanceof GuildMemberRoleManager ?
+  // interaction.member?.roles.cache.map(role => role.id) : interaction.member?.roles) || []);
+
+  // const response = await interaction.reply(buildReply(category, allRoles, myRoles))
+
+  // const collector = response.createMessageComponentCollector({
+  //   componentType: ComponentType.StringSelect,
+  //   time: 3_600_000
+  // });
+
+  // collector.on('collect', async (i: StringSelectMenuInteraction) => {
+  //   let guild = await client.guilds.fetch(interaction.guildId as string)
+  //   let member = guild.members.cache.get(interaction.member?.user?.id as string);
+  //   if (!member) {
+  //     return;
+  //   }
+
+  //   for (const roleId of i.values) {
+  //     if (myRoles.has(roleId)) {
+  //       member.roles.add(roleId)
+  //     } else {
+  //       myRoles.delete(roleId)
+  //       member.roles.remove(roleId)
+  //     }
+  //   }
+  //   console.log(i);
+
+  //   interaction.editReply({ content: "Thanks. All Done" })
+  // });
 }

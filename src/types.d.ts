@@ -2,7 +2,7 @@ import { SlashCommandBuilder, CommandInteraction, Collection, PermissionResolvab
 
 export interface Command {
   name: string,
-  execute: (interaction: CommandInteraction, rest:REST) => Promise<void>,
+  execute: (interaction: CommandInteraction, client: Client) => Promise<void>,
   permissions: Array<PermissionResolvable>,
   aliases: Array<string>,
   cooldown?: number,
@@ -22,7 +22,6 @@ declare global {
 
 declare module "discord.js" {
   export interface Client {
-      slashCommands: Collection<string, SlashCommand>
       commands: Collection<string, Command>,
       cooldowns: Collection<string, number>
   }

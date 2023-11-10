@@ -60,4 +60,4 @@ loadCommands().then(() => {
   client.login(process.env.DISCORD_BOT_SECRET);
 });
 
-console.log(`https://discord.com/api/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&permissions=0&scope=bot%20applications.commands`);
+console.log(`https://discord.com/api/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&permissions=268435456&scope=bot%20applications.commands`);
