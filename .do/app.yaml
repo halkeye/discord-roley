@@ -1,7 +1,6 @@
 name: discord-roley
 services:
-- environment_slug: node-js
-  github:
+- github:
     branch: main
     deploy_on_push: true
     repo: halkeye/discord-roley
@@ -17,3 +16,4 @@ services:
       scope: RUN_TIME
       value: ""
   name: discord-roley
+  dockerfile_path: Dockerfile

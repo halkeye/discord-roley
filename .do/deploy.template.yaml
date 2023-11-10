@@ -2,7 +2,7 @@ spec:
   name: discord-roley
   workers:
     - name: discord-roley
-      environment_slug: node-js
+      dockerfile_path: Dockerfile
       github:
         branch: main
         deploy_on_push: true
