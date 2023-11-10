@@ -22,7 +22,6 @@ client.once(Events.ClientReady, async c => {
 
 const loadCommands = async () => {
   for (const filePath of globSync('./commands/**/*.{js,ts}', { cwd: __dirname })) {
-    console.log(filePath);
     const command = await import(`./${filePath}`);
     // Set a new item in the Collection with the key as the command name and the value as the exported module
     if ('data' in command && 'execute' in command) {
@@ -34,24 +33,25 @@ const loadCommands = async () => {
 }
 
 client.on(Events.InteractionCreate, async interaction => {
-  if (!interaction.isChatInputCommand()) return;
+  if (interaction.isChatInputCommand()) {
+    const command = client.commands.get(interaction.commandName);
 
-  const command = client.commands.get(interaction.commandName);
-
-  if (!command) {
-    console.error(`No command matching ${interaction.commandName} was found.`);
-    return;
-  }
-
-  try {
-    await command.execute(interaction, rest);
-  } catch (error) {
-    console.error(error);
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
-    } else {
-      await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+    if (!command) {
+      console.error(`No command matching ${interaction.commandName} was found.`);
+      return;
     }
+
+    try {
+      await command.execute(interaction, rest);
+    } catch (error) {
+      console.error(error);
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
+      } else {
+        await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+      }
+    }
+  // } else if (interaction.isMessageComponent()) {
   }
 });
 

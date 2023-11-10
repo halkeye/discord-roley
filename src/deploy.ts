@@ -13,7 +13,6 @@ const rest = new REST().setToken(process.env.DISCORD_BOT_SECRET);
   const commands = [];
 
   for (const filePath of globSync('./commands/**/*.{js,ts}', { cwd: __dirname })) {
-    console.log(filePath);
     const command = await import(`./${filePath}`);
     if ('data' in command && 'execute' in command) {
       commands.push(command.data.toJSON());
