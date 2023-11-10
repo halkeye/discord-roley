@@ -3,6 +3,7 @@ import path from 'path';
 import { globSync } from 'glob'
 import { fileURLToPath } from 'url';
 import { Command } from './types.js';
+import { ActivityType } from 'discord.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -15,6 +16,11 @@ client.commands = new Collection<string, Command>()
 // We use 'c' for the event parameter to keep it separate from the already defined 'client'
 client.once(Events.ClientReady, async c => {
   console.log(`Ready! Logged in as ${c.user.tag}`);
+  client.user?.setActivity({
+    name: "Managing your /roles since '89",
+    url: 'https://github.com/halkeye/discord-roley',
+    type: ActivityType.Playing,
+  });
 })
 
 const loadCommands = async () => {
