@@ -17,8 +17,10 @@ FROM node:lts-slim
 ENV NODE_ENV production
 USER node
 
+RUN mkdir /app && chown node: -R /app
+
 # Create app directory
-WORKDIR /usr/src/app
+WORKDIR /app
 
 # Install app dependencies
 COPY package*.json ./
