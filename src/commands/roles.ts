@@ -7,7 +7,6 @@ import {
   ComponentType,
   Collection,
   Role,
-  Client,
   StringSelectMenuInteraction,
   ButtonBuilder,
   ButtonStyle
@@ -15,9 +14,11 @@ import {
 
 class Category {
   name: string = ""
+  sort: string | undefined = undefined;
 
-  constructor(data = {name: ""}) {
+  constructor(data: Record<string, string> = {name: ""}) {
     this.name = data.name;
+    this.sort = data.sort;
   }
 
   get id() {
@@ -25,15 +26,23 @@ class Category {
   }
 }
 
+function chunk<T = any>(arr: Array<T>, perChunk = 5) {
+  return arr.reduce((resultArray, item, index) => {
+    const chunkIndex = Math.floor(index/perChunk)
+
+    if(!resultArray[chunkIndex]) {
+      resultArray[chunkIndex] = [] // start a new chunk
+    }
+
+    resultArray[chunkIndex].push(item)
+
+    return resultArray
+  }, [] as Array<Array<T>>)
+}
+
 export const data = new SlashCommandBuilder()
   .setName('roles')
   .setDescription('Manage which roles you want')
-  // .addSubcommand(subcommand => subcommand.setName('list')
-  //   .setDescription('List which categories are available'))
-  // .addSubcommand(subcommand => subcommand.setName('manage')
-  //   .setDescription('List which categories are available')
-  //   .addUserOption(option => option.setName('category')
-  //   .setDescription('Which category')))
 
 async function getRoles(interaction: CommandInteraction): Promise<{
   rolesByCategory: Collection<string, Role[]>,
@@ -50,6 +59,10 @@ async function getRoles(interaction: CommandInteraction): Promise<{
 
   let currentCategory: Category | undefined = undefined;
   for (const role of sortedRoles) {
+    if (role.name.startsWith('@everyone')) {
+      // ignore
+      continue;
+    }
     if (role.name.startsWith('{')) {
       try {
         currentCategory = new Category(JSON.parse(role.name));
@@ -67,10 +80,56 @@ async function getRoles(interaction: CommandInteraction): Promise<{
     rolesByCategory.ensure(currentCategory.id, () => new Array<Role>()).push(role);
   }
 
+  for (const category of allCategories) {
+    if (category.sort === 'alpha') {
+      rolesByCategory.ensure(category.id, () => Array<Role>()).sort(function(a, b) {
+        return a.name.localeCompare(b.name);
+      })
+    }
+  }
+
   return { rolesByCategory, allCategories };
 }
 
-export async function execute(interaction: CommandInteraction, client: Client) {
+function buildCategoryReply(allCategories: Array<Category>) {
+  const buttons = allCategories.map(category => new ButtonBuilder()
+    .setCustomId(`category_${category.id}`)
+    .setLabel(category.name)
+    .setStyle(ButtonStyle.Primary)
+  );
+  return {
+    content: "Select category of roles you are interested in.",
+    ephemeral: true,
+    components: chunk(buttons).map(chunkOfButtons => new ActionRowBuilder<ButtonBuilder>().addComponents(chunkOfButtons))
+  }
+}
+
+function buildRoleReply(category: Category, allRoles: Array<Role>, myRoles: Set<string>) {
+  const roleOptions = allRoles.map(role => {
+    return new StringSelectMenuOptionBuilder()
+      .setLabel(role.name)
+      .setValue(role.id)
+      .setDefault(myRoles.has(role.id))
+  });
+
+  return {
+    content: `Which roles inside of ${category.name}`,
+    ephemeral: true,
+    fetchReply: true,
+    components: chunk(roleOptions, 25).map((chunkOfRolesOptions, idx) => {
+      return new ActionRowBuilder<StringSelectMenuBuilder>()
+        .addComponents(
+          new StringSelectMenuBuilder()
+            .setCustomId(`role_selection_${idx}`)
+            .setMaxValues(chunkOfRolesOptions.length)
+            .addOptions(chunkOfRolesOptions)
+        )
+      }
+    ),
+  }
+}
+
+export async function execute(interaction: CommandInteraction) {
   if (!interaction.guildId) {
     throw new Error('no guild id')
   }
@@ -84,20 +143,9 @@ export async function execute(interaction: CommandInteraction, client: Client) {
     });
   }
 
+
   // Add inputs to the modal
-  const response = await interaction.reply({
-    content: "Select category of roles you are interested in.",
-    ephemeral: true,
-    components: [
-      new ActionRowBuilder<ButtonBuilder>().addComponents(
-        ...allCategories.map(category => new ButtonBuilder()
-          .setCustomId(`category_${category.id}`)
-          .setLabel(category.name)
-          .setStyle(ButtonStyle.Primary)
-        )
-      )
-    ]
-  });
+  const response = await interaction.reply(buildCategoryReply(allCategories));
 
   const confirmation = await response.awaitMessageComponent({
     filter: i => i.user.id === interaction.user.id,
@@ -138,23 +186,8 @@ export async function execute(interaction: CommandInteraction, client: Client) {
 
   await interaction.deleteReply();
 
-  const rolesResponse = await interaction.followUp({
-    content: `Which roles inside of ${category.name}`,
-    ephemeral: true,
-    fetchReply: true,
-    components: [
-      new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(new StringSelectMenuBuilder()
-        .setCustomId('role_selection')
-        .setPlaceholder('Make a selection!')
-        .setMaxValues(allRoles.length)
-        .addOptions(...allRoles.map(role => {
-          return new StringSelectMenuOptionBuilder()
-            .setLabel(role.name)
-            .setValue(role.id)
-            .setDefault(myRoles.has(role.id))
-        })))
-    ],
-  })
+  const rolesResponse = await interaction.followUp(buildRoleReply(category, allRoles, myRoles))
+
 
   const collector = rolesResponse.createMessageComponentCollector({
     componentType: ComponentType.StringSelect,
@@ -184,3 +217,4 @@ export async function execute(interaction: CommandInteraction, client: Client) {
     await interaction.deleteReply(rolesResponse.id);
   });
 }
+
