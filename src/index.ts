@@ -1,11 +1,8 @@
-import { Client, Events, GatewayIntentBits, Collection, REST } from 'discord.js';
+import { Client, Events, GatewayIntentBits, Collection } from 'discord.js';
 import path from 'path';
 import { globSync } from 'glob'
 import { fileURLToPath } from 'url';
 import { Command } from './types.js';
-
-// Construct and prepare an instance of the REST module
-const rest = new REST().setToken(process.env.DISCORD_BOT_SECRET);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -42,7 +39,7 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 
     try {
-      await command.execute(interaction, rest);
+      await command.execute(interaction);
     } catch (error) {
       console.error(error);
       if (interaction.replied || interaction.deferred) {

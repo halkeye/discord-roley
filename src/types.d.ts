@@ -2,7 +2,7 @@ import { SlashCommandBuilder, CommandInteraction, Collection, PermissionResolvab
 
 export interface Command {
   name: string,
-  execute: (interaction: CommandInteraction, client: Client) => Promise<void>,
+  execute: (interaction: CommandInteraction) => Promise<void>,
   permissions: Array<PermissionResolvable>,
   aliases: Array<string>,
   cooldown?: number,

@@ -1,0 +1,19 @@
+name: discord-roley
+services:
+- environment_slug: node-js
+  github:
+    branch: main
+    deploy_on_push: true
+    repo: halkeye/discord-roley
+  envs:
+    - key: DISCORD_BOT_SECRET
+      scope: RUN_TIME
+      value: ""
+      type: SECRET
+    - key: DISCORD_APP_ID
+      scope: RUN_TIME
+      value: ""
+    - key: DISCORD_CLIENT_ID
+      scope: RUN_TIME
+      value: ""
+  name: discord-roley
