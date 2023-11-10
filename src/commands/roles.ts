@@ -4,18 +4,13 @@ import {
   ActionRowBuilder,
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
-  GuildMemberRoleManager,
   ComponentType,
   Collection,
   Role,
   Client,
   StringSelectMenuInteraction,
-  ModalBuilder,
-  TextInputBuilder,
-  TextInputStyle,
   ButtonBuilder,
-  ButtonStyle,
-  ButtonInteraction
+  ButtonStyle
 } from 'discord.js';
 
 class Category {
