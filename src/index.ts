@@ -4,6 +4,19 @@ import { globSync } from 'glob'
 import { fileURLToPath } from 'url';
 import { Command } from './types.js';
 import { ActivityType } from 'discord.js';
+import * as Sentry from "@sentry/node";
+import { ProfilingIntegration } from "@sentry/profiling-node";
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  integrations: [
+    new ProfilingIntegration(),
+  ],
+  // Performance Monitoring
+  tracesSampleRate: 1.0,
+  // Set sampling rate for profiling - this is relative to tracesSampleRate
+  profilesSampleRate: 1.0,
+});
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -47,6 +60,7 @@ client.on(Events.InteractionCreate, async interaction => {
     try {
       await command.execute(interaction);
     } catch (error) {
+      Sentry.captureException(error);
       console.error(error);
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });

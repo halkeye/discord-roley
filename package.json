@@ -17,6 +17,8 @@
   "author": "Gavin Mogan <npm@gavinmogan.com> (https://www.gavinmogan.com/)",
   "license": "MIT",
   "dependencies": {
+    "@sentry/node": "^7.80.0",
+    "@sentry/profiling-node": "^1.2.6",
     "discord.js": "^14.13.0",
     "glob": "^10.3.10"
   },
