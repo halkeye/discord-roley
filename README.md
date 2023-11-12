@@ -9,7 +9,7 @@ I wanted something a little easier to manage and select things with.
 ## tl;dr
 
 * Deploy your own via - [![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/halkeye/discord-roley/tree/main)
-* [Use deployed version](https://discord.com/api/oauth2/authorize?client_id=1171955633675849769&permissions=268435456&scope=bot%20applications.commands)
+* [Use deployed version](https://discord.com/api/oauth2/authorize?client_id=1172621787041890374&permissions=268435456&scope=bot%20applications.commands)
 
 ## How to use
 
