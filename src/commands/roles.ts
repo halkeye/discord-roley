@@ -121,6 +121,7 @@ function buildRoleReply(category: Category, allRoles: Array<Role>, myRoles: Set<
         .addComponents(
           new StringSelectMenuBuilder()
             .setCustomId(`role_selection_${idx}`)
+            .setMinValues(0)
             .setMaxValues(chunkOfRolesOptions.length)
             .addOptions(chunkOfRolesOptions)
         )
