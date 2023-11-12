@@ -14,9 +14,20 @@ I wanted something a little easier to manage and select things with.
 ## How to use
 
 1) Make sure newly created bot role is above any roles you want to manage.
----screenshot---
+![Alt text](docs/step1.png)
 2) Create a new role above roles for a category. It should be JSON with a name field. Eg: `{"name": "Announcements"}`
+![Alt text](docs/step2.png)
 3) Put any roles you want managed under that category
+![Alt text](docs/step3.png)
 4) Run /roles in your discord
+![Alt text](docs/slashroles.gif)
 5) ????
 6) Profit
+
+# License
+
+MIT License
+
+# Issues?
+
+Feel free to create a github issue, I won't make any promises about getting to it, but likely it'll affect me too.
